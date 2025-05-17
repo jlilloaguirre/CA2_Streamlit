@@ -26,7 +26,7 @@ genre_counts = (
 heatmap = genre_counts.pivot(index='Genre', columns='Year', values='Movie Count').fillna(0)
 
 # --- Preprocess Ratings Data ---
-ratings1['timestamp'] = pd.to_datetime(ratings1['timestamp'], unit='s')
+ratings1['timestamp'] = pd.to_datetime(ratings1['timestamp'], errors='coerce')
 ratings1['dayofweek'] = ratings1['timestamp'].dt.day_name()
 ratings1['month'] = ratings1['timestamp'].dt.month
 ratings1['year'] = ratings1['timestamp'].dt.year
