@@ -2,21 +2,17 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn_extra.cluster import KMedoids
-from fcmeans import FCM
 
 # --- Load Data ---
 @st.cache_data
 
 def load_data():
     movies1 = pd.read_csv("df_movies_clean1.csv")
-    ratings = pd.read_csv("ratings1.csv")
-    tags = pd.read_csv("tags.csv")
-    return movies1, ratings, tags
+    ratings1 = pd.read_csv("ratings1.csv")
+    df_genre = pd.read_csv("df_genre.csv")
+    return movies1, ratings1, df_genre
 
-movies1, ratings, tags = load_data()
+movies1, ratings1, df_genre = load_data()
 
 # --- Preprocess Movies Data ---
 movies1['Year'] = movies1['title'].str.extract(r'\((\d{4})\)').astype(float)
@@ -39,14 +35,11 @@ ratings1['year'] = ratings1['timestamp'].dt.year
 
 ratings_week = ratings1.groupby('dayofweek', sort=False)['rating'].mean().reset_index()
 
-# --- Yearly Aggregates ---
 rating_count_by_year = ratings1.groupby('year').size().reset_index(name='Rating Count')
 avg_rating_by_year = ratings1.groupby('year')['rating'].mean().reset_index(name='Average Rating')
 ratings_yearly = rating_count_by_year.merge(avg_rating_by_year, on='year')
 
 # --- Genre Trends Prep ---
-df_genre = pd.read_csv("df_genre.csv")
-
 df_melted = df_genre.melt(
     id_vars=['rating', 'release_year'],
     value_vars=['Action', 'Adventure', 'Animation', 'Children', 'Comedy', 'Crime', 'Documentary',
@@ -57,116 +50,167 @@ df_melted = df_genre.melt(
 )
 df_melted = df_melted[df_melted['IsGenre'] == 1].copy()
 
-# --- Clustering Setup ---
-numeric_features = [
-    'avg_rating_movie', 'num_ratings_movie', 'rating_std_movie',
-    'rating_year_range', 'rating_trend', 'genre_count', 'release_decade'
-]
-
 # --- Dashboard Tabs ---
 tabs = st.tabs([
-    "Genre-Year Heatmap", "Ratings Overview", "Yearly Ratings",
-    "Genre Trends", "K-Means Clustering", "K-Medoids Clustering", "Fuzzy C-Means Clustering"
+    "Genre-Year Heatmap", "Ratings Overview", "Yearly Ratings", "Genre Trends"
 ])
 
-# Tabs 0–3 already implemented above...
-
 # ------------------------------
-# Tab 5: K-Means Clustering
+# Tab 1: Genre-Year Movie Heatmap
 # ------------------------------
-with tabs[4]:
-    st.title("\U0001F4C9 K-Means Clustering")
-    x_col = st.selectbox("Select X-axis Feature", numeric_features, index=0)
-    y_col = st.selectbox("Select Y-axis Feature", numeric_features, index=1)
-    k = st.slider("Number of Clusters (k)", min_value=2, max_value=8, value=3)
+with tabs[0]:
+    st.title("\U0001F3AC Genre-Year Movie Heatmap")
+    st.markdown("Use the slider below to explore how movie genres evolved over time:")
 
-    df_clean = movies1[[x_col, y_col]].dropna()
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df_clean)
-    model = KMeans(n_clusters=k, n_init=10, random_state=42)
-    labels = model.fit_predict(X_scaled)
-    df_clean['Cluster'] = labels
-    centroids = scaler.inverse_transform(model.cluster_centers_)
-
-    fig = px.scatter(
-        df_clean, x=x_col, y=y_col,
-        color=df_clean['Cluster'].astype(str),
-        title=f"K-Means Clustering (k={k})",
-        height=550
+    min_year = int(heatmap.columns.min())
+    max_year = int(heatmap.columns.max())
+    year_range = st.slider(
+        "Select Year Range:",
+        min_value=min_year,
+        max_value=max_year,
+        value=(min_year, max_year),
+        step=1
     )
-    fig.add_scatter(
-        x=centroids[:, 0], y=centroids[:, 1],
-        mode='markers',
-        marker=dict(color='black', size=14, symbol='x'),
-        name='Centroids'
+    filtered = heatmap.loc[:, year_range[0]:year_range[1]]
+    fig = px.imshow(
+        filtered,
+        aspect='auto',
+        color_continuous_scale='viridis',
+        labels=dict(color='Movie Count'),
+        title="Movie Genre Frequency by Year"
     )
-    st.plotly_chart(fig, use_container_width=True)
-
-# ------------------------------
-# Tab 6: K-Medoids Clustering
-# ------------------------------
-with tabs[5]:
-    st.title("\U0001F52C K-Medoids Clustering")
-    x_col = st.selectbox("X-axis Feature", numeric_features, index=0, key="kmed_x")
-    y_col = st.selectbox("Y-axis Feature", numeric_features, index=1, key="kmed_y")
-    k = st.slider("Number of Clusters", min_value=2, max_value=8, value=3, key="kmed_k")
-
-    df_clean = movies1[[x_col, y_col]].dropna()
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df_clean)
-    model = KMedoids(n_clusters=k, random_state=42)
-    labels = model.fit_predict(X_scaled)
-    df_clean['Cluster'] = labels
-    centroids = scaler.inverse_transform(model.cluster_centers_)
-
-    fig = px.scatter(
-        df_clean, x=x_col, y=y_col,
-        color=df_clean['Cluster'].astype(str),
-        title=f"K-Medoids Clustering (k={k})",
-        height=550
-    )
-    fig.update_traces(marker=dict(size=6, opacity=0.6))
-    fig.add_scatter(
-        x=centroids[:, 0], y=centroids[:, 1],
-        mode='markers',
-        marker=dict(color='black', size=14, symbol='x'),
-        name='Medoids'
+    fig.update_layout(
+        font=dict(size=13),
+        height=600,
+        xaxis_title="Year",
+        yaxis_title="Genre",
+        margin=dict(l=60, r=30, t=60, b=60),
+        coloraxis_colorbar=dict(title='Number of Movies')
     )
     st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
-# Tab 7: Fuzzy C-Means Clustering
+# Tab 2: Ratings Overview
 # ------------------------------
-with tabs[6]:
-    st.title("\U0001F440 Fuzzy C-Means Clustering")
-    x_col = st.selectbox("X-axis Feature", numeric_features, index=0, key="fuzzy_x")
-    y_col = st.selectbox("Y-axis Feature", numeric_features, index=1, key="fuzzy_y")
+with tabs[1]:
+    st.title("\U0001F4CA Ratings Data Overview")
+    st.markdown("**This dashboard explores user rating behavior by weekday and month.**")
 
-    df_clean = movies1[[x_col, y_col]].dropna()
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df_clean)
+    custom_scale = px.colors.sequential.Viridis[2:10] + px.colors.sequential.OrRd[1:7]
 
-    fcm = FCM(n_clusters=3, random_state=42)
-    fcm.fit(X_scaled)
-    labels = fcm.predict(X_scaled)
-    memberships = fcm.u.max(axis=0)
-    centroids = scaler.inverse_transform(fcm.centers)
-
-    df_clean['Cluster'] = labels
-    df_clean['Membership'] = memberships
-
-    fig = px.scatter(
-        df_clean, x=x_col, y=y_col,
-        color=df_clean['Cluster'].astype(str),
-        size='Membership',
-        opacity=0.65,
-        title="Fuzzy C-Means Clustering (c=3)",
-        height=550
+    fig_day = px.bar(
+        ratings_week,
+        x='dayofweek',
+        y='rating',
+        title='Average Rating by Day of the Week',
+        color='rating',
+        color_continuous_scale=custom_scale,
+        labels={'dayofweek': 'Day of Week', 'rating': 'Average Rating'},
+        template='plotly_white'
     )
-    fig.add_scatter(
-        x=centroids[:, 0], y=centroids[:, 1],
-        mode='markers',
-        marker=dict(color='black', size=14, symbol='x'),
-        name='Centroids'
+    fig_day.update_layout(
+        xaxis_title='Day of Week',
+        yaxis_title='Average Rating',
+        font=dict(size=13),
+        height=450,
+        yaxis=dict(range=[3.46, 3.54])
+    )
+    st.plotly_chart(fig_day, use_container_width=True)
+
+    monthly_counts = ratings1['month'].value_counts().sort_index().reset_index()
+    monthly_counts.columns = ['Month', 'Rating Count']
+
+    fig_month = px.bar(
+        monthly_counts,
+        x='Month',
+        y='Rating Count',
+        title='Number of Ratings per Month',
+        color='Rating Count',
+        color_continuous_scale=custom_scale,
+        template='plotly_white'
+    )
+    fig_month.update_layout(
+        xaxis_title='Month',
+        yaxis_title='Number of Ratings',
+        font=dict(size=13),
+        height=450
+    )
+    st.plotly_chart(fig_month, use_container_width=True)
+
+# ------------------------------
+# Tab 3: Yearly Ratings
+# ------------------------------
+with tabs[2]:
+    st.title("\U0001F4C8 Yearly Ratings Analysis")
+    st.markdown("**Click below to explore yearly metrics for rating count and average rating.**")
+
+    metric = st.selectbox("Select Metric", options=['Rating Count', 'Average Rating'])
+
+    fig = px.bar(
+        ratings_yearly,
+        x='year',
+        y=metric,
+        title=f'{metric} per Year',
+        color=metric,
+        color_continuous_scale=custom_scale,
+        template='plotly_white'
+    )
+    fig.update_layout(
+        xaxis_title='Year',
+        yaxis_title=metric,
+        font=dict(size=13),
+        height=500,
+        margin=dict(l=60, r=30, t=60, b=60)
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# ------------------------------
+# Tab 4: Genre Rating Trends
+# ------------------------------
+with tabs[3]:
+    st.title("\U0001F4D1 Genre Rating Trends")
+    st.markdown("Select one or more genres and a year range to explore rating trends.")
+
+    genres = sorted(df_melted['Genre'].unique())
+    selected_genres = st.multiselect("Select Genres", options=genres, default=['Drama'])
+
+    year_range = st.slider(
+        "Select Release Year Range:",
+        min_value=int(df_melted['release_year'].min()),
+        max_value=int(df_melted['release_year'].max()),
+        value=(2000, 2015),
+        step=1
+    )
+
+    filtered = df_melted[
+        (df_melted['Genre'].isin(selected_genres)) &
+        (df_melted['release_year'].between(year_range[0], year_range[1]))
+    ]
+
+    if filtered.empty:
+        st.warning("No data available for the selected filters.")
+    else:
+        trend_data = (
+            filtered.groupby(['Genre', 'release_year'])['rating']
+            .mean().reset_index()
+        )
+
+        fig = px.line(
+            trend_data,
+            x='release_year',
+            y='rating',
+            color='Genre',
+            markers=True,
+            template='plotly_white',
+            title='Average Rating by Genre Over Time',
+            labels={'rating': 'Average Rating', 'release_year': 'Release Year'}
+        )
+
+        fig.update_layout(
+            height=550,
+            font=dict(size=13),
+            xaxis=dict(tickmode='linear'),
+            margin=dict(l=40, r=20, t=50, b=60),
+            hovermode='x unified'
+        )
+        st.plotly_chart(fig, use_container_width=True)
