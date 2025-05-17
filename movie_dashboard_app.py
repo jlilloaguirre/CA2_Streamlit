@@ -3,13 +3,11 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-# --- Load Data ---
 @st.cache_data
-
 def load_data():
-    movies = pd.read_csv("movies.csv")
-    ratings1 = pd.read_csv("ratings1.csv")
-    df_genre = pd.read_csv("df_genre.csv")
+    movies = pd.read_csv("movies.csv", encoding="latin1")
+    ratings1 = pd.read_csv("ratings1.csv", encoding="latin1")
+    df_genre = pd.read_csv("df_genre.csv", encoding="latin1")
     return movies, ratings1, df_genre
 
 movies, ratings1, df_genre = load_data()
