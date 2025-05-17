@@ -85,7 +85,7 @@ with tabs[0]:
         margin=dict(l=60, r=30, t=60, b=60),
         coloraxis_colorbar=dict(title='Number of Movies')
     )
-    st.plotly_chart(fig, use_container_width=True, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
 # Tab 2: Ratings Overview
