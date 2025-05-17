@@ -7,17 +7,17 @@ import plotly.express as px
 @st.cache_data
 
 def load_data():
-    movies1 = pd.read_csv("df_movies_clean1.csv")
+    movies = pd.read_csv("movies.csv")
     ratings1 = pd.read_csv("ratings1.csv")
     df_genre = pd.read_csv("df_genre.csv")
-    return movies1, ratings1, df_genre
+    return movies, ratings1, df_genre
 
-movies1, ratings1, df_genre = load_data()
+movies, ratings1, df_genre = load_data()
 
 # --- Preprocess Movies Data ---
-movies1['Year'] = movies1['title'].str.extract(r'\((\d{4})\)').astype(float)
-movies1['genres'] = movies1['genres'].str.split('|')
-genre_year_df = movies1.explode('genres').rename(columns={'genres': 'Genre'})
+movies['Year'] = movies['title'].str.extract(r'\((\d{4})\)').astype(float)
+movies['genres'] = movies['genres'].str.split('|')
+genre_year_df = movies.explode('genres').rename(columns={'genres': 'Genre'})
 
 # --- Genre-Year Heatmap Data ---
 genre_counts = (
