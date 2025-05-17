@@ -57,7 +57,7 @@ tabs = st.tabs([
 # Tab 1: Genre-Year Movie Heatmap
 # ------------------------------
 with tabs[0]:
-    st.title("\U0001F3AC Genre-Year Movie Heatmap")
+    st.title("Genre-Year Movie Heatmap")
     st.markdown("Use the slider below to explore how movie genres evolved over time:")
 
     min_year = int(heatmap.columns.min())
@@ -91,7 +91,7 @@ with tabs[0]:
 # Tab 2: Ratings Overview
 # ------------------------------
 with tabs[1]:
-    st.title("\U0001F4CA Ratings Data Overview")
+    st.title("Ratings Data Overview")
     st.markdown("**This dashboard explores user rating behavior by weekday and month.**")
 
     custom_scale = px.colors.sequential.Viridis[2:10] + px.colors.sequential.OrRd[1:7]
@@ -139,7 +139,7 @@ with tabs[1]:
 # Tab 3: Yearly Ratings
 # ------------------------------
 with tabs[2]:
-    st.title("\U0001F4C8 Yearly Ratings Analysis")
+    st.title("Yearly Ratings Analysis")
     st.markdown("**Click below to explore yearly metrics for rating count and average rating.**")
 
     metric = st.selectbox("Select Metric", options=['Rating Count', 'Average Rating'])
@@ -166,7 +166,7 @@ with tabs[2]:
 # Tab 4: Genre Rating Trends
 # ------------------------------
 with tabs[3]:
-    st.title("\U0001F4D1 Genre Rating Trends")
+    st.title("Genre Rating Trends")
     st.markdown("Select one or more genres and a year range to explore rating trends.")
 
     genres = sorted(df_melted['Genre'].unique())
